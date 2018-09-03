@@ -69,24 +69,30 @@ object LogParser {
     * scala> parseLog("X blblbaaaaa")
     * = UnknownLog("X blblbaaaaa")
     **/
-  def parseLog(str: String): LogMessage = {
-    def parseInt(s: String): Option[Int] = Try(s.toInt).toOption
 
+  def parseInt(s: String): Option[Int] = Try(s.toInt).toOption
+
+  def parseKnownLog(str: String): Option[KnownLog] = {
     val parts = str.split(",")
 
-    val maybeLog = parts match {
-      case Array("E", sevStr, tsStr, message) => for {
-        severity  <- parseInt(sevStr)
-        timestamp <- parseInt(tsStr)
-      } yield KnownLog(Error(severity), timestamp, message)
+    parts match {
+      case Array("E", sevStr, tsStr, message) =>
+        parseErrorLog(sevStr, tsStr, message)
       case Array("W", tsStr, message) =>
         parseInt(tsStr).map(KnownLog(Warning, _, message))
       case Array("I", tsStr, message) =>
         parseInt(tsStr).map(KnownLog(Info, _, message))
       case _ => None
     }
+  }
 
-    maybeLog.getOrElse(UnknownLog(str))
+  def parseErrorLog(severityStr: String, timestampStr: String, message: String): Option[KnownLog] = for {
+    severity <- parseInt(severityStr)
+    timestamp <- parseInt(timestampStr)
+  } yield KnownLog(Error(severity), timestamp, message)
+
+  def parseLog(str: String): LogMessage = {
+    parseKnownLog(str).getOrElse(UnknownLog(str))
   }
 
   /**
